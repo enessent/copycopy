@@ -39,10 +39,15 @@ async def analyze_wallet(request: WalletRequest):
         response = requests.get(url, params=params)
         transactions = response.json()
         
+        # Safely handle the transactions
+        recent_txs = []
+        if isinstance(transactions, list):
+            recent_txs = transactions[:5] if transactions else []
+        
         return {
             "address": request.address,
-            "transactions_count": len(transactions),
-            "recent_transactions": transactions[:5]  # Return first 5 transactions
+            "transactions_count": len(recent_txs),
+            "recent_transactions": recent_txs
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Error processing request: {str(e)}"}
