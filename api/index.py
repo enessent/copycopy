@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import requests
-from typing import Optional, Dict, List
-from datetime import datetime
+from typing import Optional
 
 app = FastAPI()
 
@@ -24,43 +23,43 @@ async def analyze_wallet(request: WalletRequest):
     try:
         api_key = os.environ.get("HELIUS_API_KEY")
         
-        # Updated Helius API endpoint
-        url = f"https://api.helius.xyz/v1/addresses/{request.address}/transactions"
+        # Helius parseTransactions API endpoint
+        url = "https://api.helius.xyz/v0/transactions"
         
-        params = {
-            "api-key": api_key,
+        # Get signatures first
+        signatures_url = f"https://api.helius.xyz/v0/addresses/{request.address}/transactions"
+        signatures_params = {
+            "api-key": api_key
         }
-
-        print(f"Requesting data for address: {request.address}")  # Debug print
-        response = requests.get(url, params=params)
         
-        # Debug prints
-        print(f"Status code: {response.status_code}")
-        print(f"Response text: {response.text[:200]}")  # First 200 chars of response
+        # Debug print API key (first few characters)
+        print(f"Using API key: {api_key[:5]}..." if api_key else "No API key found")
         
-        if response.status_code != 200:
-            return {"error": f"Helius API error: {response.status_code}"}
+        signatures_response = requests.get(signatures_url, params=signatures_params)
+        print(f"Signatures response status: {signatures_response.status_code}")
+        
+        if signatures_response.status_code != 200:
+            return {
+                "error": f"Helius API error: {signatures_response.status_code}",
+                "details": signatures_response.text
+            }
             
-        transactions = response.json()
+        transactions_data = signatures_response.json()
         
-        # Basic analysis
-        filtered_txs = []
-        for tx in transactions:
-            if isinstance(tx, dict):  # Verify transaction is valid
-                filtered_txs.append({
-                    "signature": tx.get("signature", ""),
-                    "timestamp": tx.get("timestamp", ""),
-                    "type": tx.get("type", ""),
-                    "fee": tx.get("fee", 0)
-                })
-        
+        if not transactions_data:
+            return {
+                "address": request.address,
+                "transactions_count": 0,
+                "recent_transactions": [],
+                "status": "No transactions found"
+            }
+
         return {
             "address": request.address,
-            "timeframe_days": request.timeframe,
-            "transactions_count": len(filtered_txs),
-            "recent_transactions": filtered_txs[:5],
-            "raw_response_sample": str(transactions)[:100] if transactions else "No transactions"  # Debug info
+            "transactions_count": len(transactions_data),
+            "recent_transactions": transactions_data[:5],
+            "status": "success"
         }
         
     except Exception as e:
-        return {"error": f"Error processing request: {str(e)}", "details": str(type(e))}
+        return {"error": f"Error processing request: {str(e)}"}
