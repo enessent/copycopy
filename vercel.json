@@ -1,23 +1,14 @@
-# vercel.json
 {
-  "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
+      "src": "main.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "src": "/(.*)",
+      "dest": "main.py"
     }
   ]
 }
-
-# requirements.txt
-fastapi==0.68.0
-pydantic==1.8.2
-requests==2.26.0
-python-dotenv==0.19.0
-uvicorn==0.15.0
